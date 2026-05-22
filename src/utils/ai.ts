@@ -26,8 +26,11 @@ export async function generateCodeReview(filesData: FileData[], deployedUrl: str
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash',
     contents: [
-      { role: 'user', parts: [{ text: SYSTEM_PROMPT + "\n\n" + codebaseContext }] }
-    ]
+      { role: 'user', parts: [{ text: codebaseContext }] }
+    ],
+    config: {
+      systemInstruction: SYSTEM_PROMPT
+    }
   });
 
   Logger.info("Received review response from Gemini successfully.");
