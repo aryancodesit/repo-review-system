@@ -13,9 +13,13 @@ export function LocalUploadForm({ onUpload }: LocalUploadFormProps) {
         <input 
           type="file" 
           className={styles.fileInput}
+          /* Note: webkitdirectory and directory are non-standard but widely supported by 
+             modern browsers (Chrome, Edge, Firefox) for native folder selection. 
+             We provide 'multiple' as a standard fallback for browsers that don't support it. */
           // @ts-ignore
           webkitdirectory="true"
           directory="true"
+          multiple={true}
           onChange={onUpload}
         />
         <Upload className={styles.uploadIcon} />

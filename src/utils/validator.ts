@@ -5,13 +5,21 @@ export interface FileData {
   content: string;
 }
 
+export const VALID_EXTENSIONS = ['.js', '.ts', '.jsx', '.tsx', '.py', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.md', '.html', '.css'];
+export const MAX_FILE_SIZE_BYTES = 200 * 1024; // 200KB
+
+export function isValidFilePath(path: string): boolean {
+  if (path.includes('node_modules/') || path.includes('.git/') || path.includes('.next/') || path.includes('dist/') || path.includes('build/')) {
+    return false;
+  }
+  return VALID_EXTENSIONS.some(ext => path.endsWith(ext));
+}
+
 /**
  * Validates files uploaded from the local system on the server-side.
  * Enforces size limits and allowed extensions.
  */
 export function validateLocalFiles(files: any[]): FileData[] {
-  const validExtensions = ['.js', '.ts', '.jsx', '.tsx', '.py', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.md', '.html', '.css'];
-  
   let validCount = 0;
   let skippedCount = 0;
 
@@ -21,20 +29,13 @@ export function validateLocalFiles(files: any[]): FileData[] {
       return false;
     }
     
-    // Explicitly reject invalid paths on the server
-    if (f.path.includes('node_modules/') || f.path.includes('.git/') || f.path.includes('.next/') || f.path.includes('dist/') || f.path.includes('build/')) {
+    if (!isValidFilePath(f.path)) {
       skippedCount++;
       return false;
     }
     
-    // Strictly skip anything over 200KB characters on the server
-    if (f.content.length > 200 * 1024) {
-      skippedCount++;
-      return false;
-    }
-    
-    const isValidExt = validExtensions.some(ext => f.path.endsWith(ext));
-    if (!isValidExt) {
+    // Strictly skip anything over MAX_FILE_SIZE_BYTES characters on the server
+    if (f.content.length > MAX_FILE_SIZE_BYTES) {
       skippedCount++;
       return false;
     }

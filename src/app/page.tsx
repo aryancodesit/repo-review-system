@@ -7,6 +7,7 @@ import styles from './page.module.css';
 import { GithubForm } from '../components/GithubForm';
 import { LocalUploadForm } from '../components/LocalUploadForm';
 import { ReportViewer } from '../components/ReportViewer';
+import { isValidFilePath, MAX_FILE_SIZE_BYTES } from '../utils/validator';
 
 interface UploadedFileData {
   path: string;
@@ -67,24 +68,20 @@ export default function Home() {
     setStatus('Reading local files...');
     
     try {
-      const validExtensions = ['.js', '.ts', '.jsx', '.tsx', '.py', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.md', '.html', '.css'];
       let skippedCount = 0;
       
       const fileArray: File[] = Array.from(files);
       const validFiles = fileArray.filter((file: File) => {
         const path = file.webkitRelativePath || file.name;
-        if (path.includes('node_modules/') || path.includes('.git/') || path.includes('.next/') || path.includes('dist/') || path.includes('build/')) {
+        
+        // Use the exact same path validation as the server
+        if (!isValidFilePath(path)) {
           skippedCount++;
           return false;
         }
         
-        const isExtensionValid = validExtensions.some(ext => path.endsWith(ext));
-        if (!isExtensionValid) {
-          skippedCount++;
-          return false;
-        }
-        
-        if (file.size > 100 * 1024) {
+        // Use the exact same file size limit as the server
+        if (file.size > MAX_FILE_SIZE_BYTES) {
           skippedCount++;
           return false;
         } 
