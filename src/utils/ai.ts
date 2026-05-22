@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { Logger } from './logger';
-import { SYSTEM_PROMPT } from '../app/api/analyze/prompt';
+import { SYSTEM_PROMPT } from '../config/prompts';
 import { FileData } from './validator';
 
 /**

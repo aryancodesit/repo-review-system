@@ -34,6 +34,9 @@ export function ReportViewer({ result, onReset }: ReportViewerProps) {
           Download .md
         </button>
       </div>
+      <div style={{ padding: '0 2rem', marginTop: '-0.5rem', marginBottom: '1rem', color: '#a1a1aa', fontSize: '0.85rem', fontStyle: 'italic' }}>
+        *Note: To ensure optimal performance and cost efficiency, this analysis prioritizes the most relevant 30-50 files in the codebase. Extremely large repositories may be partially reviewed.
+      </div>
       <div className={styles.resultsContent}>
         <div className="markdown-body">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>

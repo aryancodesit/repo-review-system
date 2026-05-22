@@ -16,6 +16,11 @@ export class GithubAPIError extends Error {
   }
 }
 
+// In-memory cache to store recent GitHub repository payloads and avoid hitting rate limits.
+// In a production environment, this would be replaced with Redis or similar.
+const repoCache = new Map<string, { data: GithubRepoData; timestamp: number }>();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 /**
  * Fetches repository metadata and codebase tree from GitHub.
  */
@@ -27,6 +32,14 @@ export async function fetchGithubRepoFiles(url: string, githubToken?: string): P
   
   const owner = match[1];
   const repo = match[2].replace('.git', '');
+  const cacheKey = `${owner}/${repo}`;
+  
+  // Check Cache
+  const cached = repoCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+    Logger.info(`Returning cached data for ${cacheKey}`);
+    return cached.data;
+  }
   
   const headers: HeadersInit = {};
   if (githubToken) {
@@ -82,6 +95,11 @@ export async function fetchGithubRepoFiles(url: string, githubToken?: string): P
   
   const validFiles = fileContents.filter((f): f is FileData => f !== null);
   
-  Logger.info(`Successfully fetched ${validFiles.length} files from GitHub.`);
-  return { files: validFiles, homepage };
+  const result: GithubRepoData = { files: validFiles, homepage };
+  
+  // Save to Cache
+  repoCache.set(cacheKey, { data: result, timestamp: Date.now() });
+  
+  Logger.info(`Successfully fetched ${validFiles.length} files from GitHub. Data cached.`);
+  return result;
 }

@@ -21,6 +21,12 @@ export function validateLocalFiles(files: any[]): FileData[] {
       return false;
     }
     
+    // Explicitly reject invalid paths on the server
+    if (f.path.includes('node_modules/') || f.path.includes('.git/') || f.path.includes('.next/') || f.path.includes('dist/') || f.path.includes('build/')) {
+      skippedCount++;
+      return false;
+    }
+    
     // Strictly skip anything over 200KB characters on the server
     if (f.content.length > 200 * 1024) {
       skippedCount++;
