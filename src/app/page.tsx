@@ -48,8 +48,16 @@ export default function Home() {
       });
       
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to analyze repository');
+        let errorMessage = 'Failed to analyze repository';
+        try {
+          const data = await response.json();
+          errorMessage = data.error || errorMessage;
+        } catch (e) {
+          // If it's not JSON (e.g., Vercel plain text error), read as text
+          const textError = await response.text();
+          if (textError) errorMessage = textError;
+        }
+        throw new Error(errorMessage);
       }
       
       setStatus('Generating report...');
@@ -132,8 +140,16 @@ export default function Home() {
       });
       
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to analyze local folder');
+        let errorMessage = 'Failed to analyze local folder';
+        try {
+          const data = await response.json();
+          errorMessage = data.error || errorMessage;
+        } catch (e) {
+          // If it's not JSON (e.g., Vercel plain text error), read as text
+          const textError = await response.text();
+          if (textError) errorMessage = textError;
+        }
+        throw new Error(errorMessage);
       }
       
       setStatus('Generating report...');
