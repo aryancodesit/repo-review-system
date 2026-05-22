@@ -66,11 +66,18 @@ export default function Home() {
     try {
       // Filter text files and read them client-side to save bandwidth
       // We'll skip large folders like node_modules, .git, etc.
+      const validExtensions = ['.js', '.ts', '.jsx', '.tsx', '.py', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.md', '.html', '.css'];
       const validFiles = Array.from(files).filter(file => {
         const path = file.webkitRelativePath || file.name;
-        if (path.includes('node_modules/') || path.includes('.git/')) return false;
-        // Simple heuristic: avoid images, binaries, etc based on size or type
-        if (file.size > 500 * 1024) return false; // Skip files > 500KB
+        if (path.includes('node_modules/') || path.includes('.git/') || path.includes('.next/') || path.includes('dist/') || path.includes('build/')) return false;
+        
+        // Must match a known code extension
+        const isExtensionValid = validExtensions.some(ext => path.endsWith(ext));
+        if (!isExtensionValid) return false;
+        
+        // Strictly skip files > 100KB to avoid sending massive bundles or huge un-split generated files
+        if (file.size > 100 * 1024) return false; 
+        
         return true;
       });
 
