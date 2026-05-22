@@ -17,8 +17,10 @@ import styles from './page.module.css';
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'github' | 'local'>('github');
   const [githubUrl, setGithubUrl] = useState('');
+  const [githubToken, setGithubToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
+  const [warning, setWarning] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +30,7 @@ export default function Home() {
     
     setLoading(true);
     setError(null);
+    setWarning(null);
     setResult(null);
     setStatus('Cloning repository...');
     
@@ -35,7 +38,7 @@ export default function Home() {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'github', url: githubUrl })
+        body: JSON.stringify({ type: 'github', url: githubUrl, githubToken })
       });
       
       if (!response.ok) {
@@ -60,6 +63,7 @@ export default function Home() {
     
     setLoading(true);
     setError(null);
+    setWarning(null);
     setResult(null);
     setStatus('Reading local files...');
     
@@ -67,19 +71,33 @@ export default function Home() {
       // Filter text files and read them client-side to save bandwidth
       // We'll skip large folders like node_modules, .git, etc.
       const validExtensions = ['.js', '.ts', '.jsx', '.tsx', '.py', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.md', '.html', '.css'];
+      let skippedCount = 0;
       const validFiles = Array.from(files).filter(file => {
         const path = file.webkitRelativePath || file.name;
-        if (path.includes('node_modules/') || path.includes('.git/') || path.includes('.next/') || path.includes('dist/') || path.includes('build/')) return false;
+        if (path.includes('node_modules/') || path.includes('.git/') || path.includes('.next/') || path.includes('dist/') || path.includes('build/')) {
+          skippedCount++;
+          return false;
+        }
         
         // Must match a known code extension
         const isExtensionValid = validExtensions.some(ext => path.endsWith(ext));
-        if (!isExtensionValid) return false;
+        if (!isExtensionValid) {
+          skippedCount++;
+          return false;
+        }
         
         // Strictly skip files > 100KB to avoid sending massive bundles or huge un-split generated files
-        if (file.size > 100 * 1024) return false; 
+        if (file.size > 100 * 1024) {
+          skippedCount++;
+          return false;
+        } 
         
         return true;
       });
+
+      if (skippedCount > 0) {
+        setWarning(`Skipped ${skippedCount} file(s) that were unsupported, >100KB, or in excluded folders.`);
+      }
 
       setStatus(`Parsing ${validFiles.length} files...`);
       
@@ -163,20 +181,34 @@ export default function Home() {
 
               {activeTab === 'github' && (
                 <form onSubmit={handleAnalyzeGithub} className={styles.inputGroup}>
-                  <div>
-                    <label className={styles.label}>
-                      Repository URL
-                    </label>
-                    <input 
-                      type="url" 
-                      className={styles.input}
-                      placeholder="https://github.com/username/repository"
-                      value={githubUrl}
-                      onChange={(e) => setGithubUrl(e.target.value)}
-                      required
-                    />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                      <label className={styles.label}>
+                        Repository URL
+                      </label>
+                      <input 
+                        type="url" 
+                        className={styles.input}
+                        placeholder="https://github.com/username/repository"
+                        value={githubUrl}
+                        onChange={(e) => setGithubUrl(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={styles.label}>
+                        GitHub Token (Optional - for private repos or rate limits)
+                      </label>
+                      <input 
+                        type="password" 
+                        className={styles.input}
+                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                        value={githubToken}
+                        onChange={(e) => setGithubToken(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <button type="submit" className={styles.button}>
+                  <button type="submit" className={styles.button} style={{ marginTop: '1rem' }}>
                     <Search size={20} />
                     Analyze Repository
                   </button>
@@ -209,6 +241,13 @@ export default function Home() {
                   {error}
                 </div>
               )}
+
+              {warning && !loading && !error && (
+                <div className={styles.error} style={{ background: 'rgba(234, 179, 8, 0.1)', color: '#facc15', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
+                  <AlertCircle size={18} />
+                  {warning}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -219,6 +258,11 @@ export default function Home() {
             <div className={`${styles.statusText} animate-pulse-glow`}>
               {status}
             </div>
+            {warning && (
+              <div style={{ marginTop: '1rem', color: '#facc15', fontSize: '0.875rem' }}>
+                {warning}
+              </div>
+            )}
           </div>
         )}
 
