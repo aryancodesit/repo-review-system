@@ -23,15 +23,42 @@ export async function generateCodeReviewStream(filesData: FileData[], deployedUr
 
   Logger.info("Sending payload to Gemini 2.5 Flash (Streaming)...");
   
-  const stream = await ai.models.generateContentStream({
-    model: 'gemini-2.5-flash',
-    contents: [
-      { role: 'user', parts: [{ text: codebaseContext }] }
-    ],
-    config: {
-      systemInstruction: SYSTEM_PROMPT
+  const MAX_RETRIES = 3;
+  let attempt = 0;
+  let stream: any;
+
+  while (attempt < MAX_RETRIES) {
+    try {
+      stream = await ai.models.generateContentStream({
+        model: 'gemini-2.5-flash',
+        contents: [
+          { role: 'user', parts: [{ text: codebaseContext }] }
+        ],
+        config: {
+          systemInstruction: SYSTEM_PROMPT
+        }
+      });
+      break; // Success, exit retry loop
+    } catch (err: any) {
+      attempt++;
+      const errorMessage = err.message || "";
+      Logger.warn(`Gemini API Attempt ${attempt} failed: ${errorMessage}`);
+
+      // If it's a 503 (Unavailable) or 429 (Too Many Requests), we retry
+      if (errorMessage.includes("503") || errorMessage.includes("429") || errorMessage.includes("UNAVAILABLE")) {
+        if (attempt >= MAX_RETRIES) {
+          throw new Error("Google Gemini AI is currently overloaded or you have hit your rate limit. Please wait a minute and try again.");
+        }
+        // Exponential backoff: 2s, 4s, 8s
+        const backoffMs = Math.pow(2, attempt) * 1000;
+        Logger.info(`Waiting ${backoffMs}ms before retrying...`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      } else {
+        // If it's some other error (e.g., auth failure, bad request), throw immediately
+        throw new Error("Failed to communicate with Gemini AI: " + (err.message || "Unknown error"));
+      }
     }
-  });
+  }
 
   return new ReadableStream({
     async start(controller) {
