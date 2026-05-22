@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Logger } from '../../../utils/logger';
 import { fetchGithubRepoFiles, GithubAPIError } from '../../../utils/github';
 import { validateLocalFiles, FileData } from '../../../utils/validator';
-import { generateCodeReview } from '../../../utils/ai';
+import { generateCodeReviewStream } from '../../../utils/ai';
 import '../../../config/env'; // Trigger environment validation on load
+
+export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
   Logger.info("Received POST request to /api/analyze");
@@ -43,10 +45,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No readable files found. Ensure you uploaded source code and not just binaries/lockfiles." }, { status: 400 });
     }
     
-    const report = await generateCodeReview(filesData, deployedUrl);
+    const stream = await generateCodeReviewStream(filesData, deployedUrl);
     
-    Logger.info("Analysis complete. Returning report to client.");
-    return NextResponse.json({ report });
+    Logger.info("Starting AI stream response...");
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
     
   } catch (error: unknown) {
     Logger.error("Error during code analysis pipeline:", error);

@@ -6,8 +6,13 @@ import styles from './page.module.css';
 
 import { GithubForm } from '../components/GithubForm';
 import { LocalUploadForm } from '../components/LocalUploadForm';
-import { ReportViewer } from '../components/ReportViewer';
+import dynamic from 'next/dynamic';
 import { isValidFilePath, MAX_FILE_SIZE_BYTES } from '../utils/validator';
+
+const ReportViewer = dynamic(() => import('../components/ReportViewer').then(mod => mod.ReportViewer), {
+  loading: () => <div className={styles.loadingState}>Loading Markdown Viewer...</div>,
+  ssr: false,
+});
 
 interface UploadedFileData {
   path: string;
@@ -47,8 +52,20 @@ export default function Home() {
       }
       
       setStatus('Generating report...');
-      const data = await response.json();
-      setResult(data.report);
+      
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Stream not available");
+      
+      const decoder = new TextDecoder();
+      let streamedResult = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        streamedResult += decoder.decode(value, { stream: true });
+        setResult(streamedResult);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -117,8 +134,20 @@ export default function Home() {
         throw new Error(data.error || 'Failed to analyze local folder');
       }
       
-      const data = await response.json();
-      setResult(data.report);
+      setStatus('Generating report...');
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Stream not available");
+      
+      const decoder = new TextDecoder();
+      let streamedResult = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        streamedResult += decoder.decode(value, { stream: true });
+        setResult(streamedResult);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -190,7 +219,7 @@ export default function Home() {
           </>
         )}
 
-        {loading && (
+        {loading && !result && (
           <div className={styles.loadingState}>
             <div className={`${styles.spinner} animate-spin`}></div>
             <div className={`${styles.statusText} animate-pulse-glow`}>
@@ -204,7 +233,7 @@ export default function Home() {
           </div>
         )}
 
-        {result && !loading && (
+        {result && (
           <ReportViewer 
             result={result} 
             onReset={() => {

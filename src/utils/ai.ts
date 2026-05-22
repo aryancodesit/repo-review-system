@@ -4,9 +4,9 @@ import { SYSTEM_PROMPT } from '../config/prompts';
 import { FileData } from './validator';
 
 /**
- * Initializes the AI SDK and manages generation requests.
+ * Initializes the AI SDK and manages generation requests, returning a stream.
  */
-export async function generateCodeReview(filesData: FileData[], deployedUrl: string | null): Promise<string> {
+export async function generateCodeReviewStream(filesData: FileData[], deployedUrl: string | null): Promise<ReadableStream> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY environment variable is missing");
   }
@@ -21,9 +21,9 @@ export async function generateCodeReview(filesData: FileData[], deployedUrl: str
     codebaseContext += `${file.content}\n\n`;
   });
 
-  Logger.info("Sending payload to Gemini 2.5 Flash...");
+  Logger.info("Sending payload to Gemini 2.5 Flash (Streaming)...");
   
-  const response = await ai.models.generateContent({
+  const stream = await ai.models.generateContentStream({
     model: 'gemini-2.5-flash',
     contents: [
       { role: 'user', parts: [{ text: codebaseContext }] }
@@ -33,11 +33,21 @@ export async function generateCodeReview(filesData: FileData[], deployedUrl: str
     }
   });
 
-  Logger.info("Received review response from Gemini successfully.");
-  
-  if (!response.text) {
-    throw new Error("AI returned an empty response.");
-  }
-  
-  return response.text;
+  return new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const chunk of stream) {
+          if (chunk.text) {
+            controller.enqueue(new TextEncoder().encode(chunk.text));
+          }
+        }
+      } catch (err) {
+        Logger.error("Stream error:", err);
+        controller.error(err);
+      } finally {
+        Logger.info("Stream completely sent to client.");
+        controller.close();
+      }
+    }
+  });
 }
