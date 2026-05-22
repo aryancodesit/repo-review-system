@@ -16,8 +16,9 @@ export class GithubAPIError extends Error {
   }
 }
 
-// In-memory cache to store recent GitHub repository payloads and avoid hitting rate limits.
-// In a production environment, this would be replaced with Redis or similar.
+// In a production environment, if REDIS_URL is present, we would use a distributed cache.
+// For single-instance or dev deployments, we fallback to an in-memory map.
+const useDistributedCache = !!process.env.REDIS_URL;
 const repoCache = new Map<string, { data: GithubRepoData; timestamp: number }>();
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 

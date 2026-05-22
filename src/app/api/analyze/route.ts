@@ -3,6 +3,7 @@ import { Logger } from '../../../utils/logger';
 import { fetchGithubRepoFiles, GithubAPIError } from '../../../utils/github';
 import { validateLocalFiles, FileData } from '../../../utils/validator';
 import { generateCodeReview } from '../../../utils/ai';
+import '../../../config/env'; // Trigger environment validation on load
 
 export async function POST(req: NextRequest) {
   Logger.info("Received POST request to /api/analyze");
@@ -47,13 +48,17 @@ export async function POST(req: NextRequest) {
     Logger.info("Analysis complete. Returning report to client.");
     return NextResponse.json({ report });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     Logger.error("Error during code analysis pipeline:", error);
     
     if (error instanceof GithubAPIError) {
       return NextResponse.json({ error: error.message, code: 'GITHUB_API_ERROR' }, { status: error.statusCode });
     }
     
-    return NextResponse.json({ error: error.message || "An unexpected error occurred during analysis" }, { status: 500 });
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    
+    return NextResponse.json({ error: "An unexpected error occurred during analysis" }, { status: 500 });
   }
 }

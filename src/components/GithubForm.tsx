@@ -34,6 +34,10 @@ export function GithubForm({ githubUrl, setGithubUrl, githubToken, setGithubToke
             value={githubToken}
             onChange={(e) => setGithubToken(e.target.value)}
           />
+          <p style={{ fontSize: '0.75rem', color: '#a1a1aa', marginTop: '0.5rem' }}>
+            *Tokens are strictly used server-side and secured in transit via TLS/HTTPS. 
+            This is a "Bring Your Own Key" (BYOK) model. We do not store your token.
+          </p>
         </div>
       </div>
       <button type="submit" className={styles.button} style={{ marginTop: '1rem' }}>
