@@ -8,6 +8,7 @@ import { GithubForm } from '../components/GithubForm';
 import { LocalUploadForm } from '../components/LocalUploadForm';
 import dynamic from 'next/dynamic';
 import { isValidFilePath, MAX_FILE_SIZE_BYTES } from '../utils/validator';
+import { reportClientError } from '../utils/reportError';
 
 const ReportViewer = dynamic(() => import('../components/ReportViewer').then(mod => mod.ReportViewer), {
   loading: () => <div className={styles.loadingState}>Loading Markdown Viewer...</div>,
@@ -67,6 +68,7 @@ export default function Home() {
         setResult(streamedResult);
       }
     } catch (err: any) {
+      reportClientError(err, { component: 'handleAnalyzeGithub', url: githubUrl });
       setError(err.message);
     } finally {
       setLoading(false);
@@ -149,6 +151,7 @@ export default function Home() {
         setResult(streamedResult);
       }
     } catch (err: any) {
+      reportClientError(err, { component: 'handleAnalyzeGithub', url: githubUrl });
       setError(err.message);
     } finally {
       setLoading(false);
