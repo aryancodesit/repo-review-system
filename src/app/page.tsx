@@ -8,6 +8,11 @@ import { GithubForm } from '../components/GithubForm';
 import { LocalUploadForm } from '../components/LocalUploadForm';
 import { ReportViewer } from '../components/ReportViewer';
 
+interface UploadedFileData {
+  path: string;
+  content: string;
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'github' | 'local'>('github');
   const [githubUrl, setGithubUrl] = useState('');
@@ -65,7 +70,8 @@ export default function Home() {
       const validExtensions = ['.js', '.ts', '.jsx', '.tsx', '.py', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.md', '.html', '.css'];
       let skippedCount = 0;
       
-      const validFiles = Array.from(files).filter(file => {
+      const fileArray: File[] = Array.from(files);
+      const validFiles = fileArray.filter((file: File) => {
         const path = file.webkitRelativePath || file.name;
         if (path.includes('node_modules/') || path.includes('.git/') || path.includes('.next/') || path.includes('dist/') || path.includes('build/')) {
           skippedCount++;
@@ -92,8 +98,8 @@ export default function Home() {
 
       setStatus(`Parsing ${validFiles.length} files...`);
       
-      const fileContents = await Promise.all(
-        validFiles.slice(0, 50).map(async (file) => {
+      const fileContents: UploadedFileData[] = await Promise.all(
+        validFiles.slice(0, 50).map(async (file: File) => {
           const text = await file.text();
           return {
             path: file.webkitRelativePath || file.name,
