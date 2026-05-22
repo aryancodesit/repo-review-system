@@ -1,18 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { 
-  GitBranch, 
-  FolderDown, 
-  Upload, 
-  Search, 
-  TerminalSquare, 
-  Download,
-  AlertCircle
-} from 'lucide-react';
+import { GitBranch, FolderDown, AlertCircle } from 'lucide-react';
 import styles from './page.module.css';
+
+import { GithubForm } from '../components/GithubForm';
+import { LocalUploadForm } from '../components/LocalUploadForm';
+import { ReportViewer } from '../components/ReportViewer';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'github' | 'local'>('github');
@@ -68,10 +62,9 @@ export default function Home() {
     setStatus('Reading local files...');
     
     try {
-      // Filter text files and read them client-side to save bandwidth
-      // We'll skip large folders like node_modules, .git, etc.
       const validExtensions = ['.js', '.ts', '.jsx', '.tsx', '.py', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.md', '.html', '.css'];
       let skippedCount = 0;
+      
       const validFiles = Array.from(files).filter(file => {
         const path = file.webkitRelativePath || file.name;
         if (path.includes('node_modules/') || path.includes('.git/') || path.includes('.next/') || path.includes('dist/') || path.includes('build/')) {
@@ -79,14 +72,12 @@ export default function Home() {
           return false;
         }
         
-        // Must match a known code extension
         const isExtensionValid = validExtensions.some(ext => path.endsWith(ext));
         if (!isExtensionValid) {
           skippedCount++;
           return false;
         }
         
-        // Strictly skip files > 100KB to avoid sending massive bundles or huge un-split generated files
         if (file.size > 100 * 1024) {
           skippedCount++;
           return false;
@@ -102,7 +93,7 @@ export default function Home() {
       setStatus(`Parsing ${validFiles.length} files...`);
       
       const fileContents = await Promise.all(
-        validFiles.slice(0, 50).map(async (file) => { // limit to 50 files for now
+        validFiles.slice(0, 50).map(async (file) => {
           const text = await file.text();
           return {
             path: file.webkitRelativePath || file.name,
@@ -130,22 +121,8 @@ export default function Home() {
     } finally {
       setLoading(false);
       setStatus('');
-      // Reset input
       e.target.value = '';
     }
-  };
-
-  const downloadReport = () => {
-    if (!result) return;
-    const blob = new Blob([result], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'REPO_REVIEW.md';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -180,59 +157,17 @@ export default function Home() {
               </div>
 
               {activeTab === 'github' && (
-                <form onSubmit={handleAnalyzeGithub} className={styles.inputGroup}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div>
-                      <label className={styles.label}>
-                        Repository URL
-                      </label>
-                      <input 
-                        type="url" 
-                        className={styles.input}
-                        placeholder="https://github.com/username/repository"
-                        value={githubUrl}
-                        onChange={(e) => setGithubUrl(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className={styles.label}>
-                        GitHub Token (Optional - for private repos or rate limits)
-                      </label>
-                      <input 
-                        type="password" 
-                        className={styles.input}
-                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                        value={githubToken}
-                        onChange={(e) => setGithubToken(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <button type="submit" className={styles.button} style={{ marginTop: '1rem' }}>
-                    <Search size={20} />
-                    Analyze Repository
-                  </button>
-                </form>
+                <GithubForm 
+                  githubUrl={githubUrl}
+                  setGithubUrl={setGithubUrl}
+                  githubToken={githubToken}
+                  setGithubToken={setGithubToken}
+                  onSubmit={handleAnalyzeGithub}
+                />
               )}
 
               {activeTab === 'local' && (
-                <div className={styles.inputGroup}>
-                  <label className={styles.fileUpload}>
-                    <input 
-                      type="file" 
-                      className={styles.fileInput}
-                      // @ts-ignore
-                      webkitdirectory="true"
-                      directory="true"
-                      onChange={handleLocalUpload}
-                    />
-                    <Upload className={styles.uploadIcon} />
-                    <div>
-                      <h3 style={{ color: '#fff', marginBottom: '0.5rem' }}>Drop your folder here</h3>
-                      <p style={{ color: '#a1a1aa', fontSize: '0.875rem' }}>Or click to browse from your computer</p>
-                    </div>
-                  </label>
-                </div>
+                <LocalUploadForm onUpload={handleLocalUpload} />
               )}
 
               {error && (
@@ -267,37 +202,13 @@ export default function Home() {
         )}
 
         {result && !loading && (
-          <div className={styles.resultsCard}>
-            <div className={styles.resultsHeader}>
-              <div className={styles.resultsTitle}>
-                <TerminalSquare className={styles.accent} size={24} color="#3b82f6" />
-                Analysis Complete
-              </div>
-              <button className={styles.downloadBtn} onClick={downloadReport}>
-                <Download size={16} />
-                Download .md
-              </button>
-            </div>
-            <div className={styles.resultsContent}>
-              <div className="markdown-body">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {result}
-                </ReactMarkdown>
-              </div>
-            </div>
-            <div style={{ padding: '0 2rem 2rem' }}>
-              <button 
-                className={styles.button}
-                onClick={() => {
-                  setResult(null);
-                  setGithubUrl('');
-                }}
-                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', boxShadow: 'none' }}
-              >
-                Analyze Another Repository
-              </button>
-            </div>
-          </div>
+          <ReportViewer 
+            result={result} 
+            onReset={() => {
+              setResult(null);
+              setGithubUrl('');
+            }} 
+          />
         )}
 
       </div>
