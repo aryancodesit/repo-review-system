@@ -266,10 +266,25 @@
   overflow-x: auto;
 }
 
+/* Error banner */
 .error {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.2);
   color: var(--danger);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Warning banner — separate class, no more inline overrides */
+.warning {
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.2);
+  color: #facc15;
   padding: 1rem;
   border-radius: 8px;
   margin-top: 1rem;

@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { TerminalSquare, Download } from 'lucide-react';
 import styles from '../app/page.module.css';
+import { MAX_FILES_FOR_ANALYSIS, MAX_FILE_SIZE_BYTES } from '../utils/constants';
 
 interface ReportViewerProps {
   result: string;
@@ -22,11 +23,13 @@ export function ReportViewer({ result, onReset }: ReportViewerProps) {
     URL.revokeObjectURL(url);
   };
 
+  const maxFileSizeKb = Math.round(MAX_FILE_SIZE_BYTES / 1024);
+
   return (
     <div className={styles.resultsCard}>
       <div className={styles.resultsHeader}>
         <div className={styles.resultsTitle}>
-          <TerminalSquare className={styles.accent} size={24} color="#3b82f6" />
+          <TerminalSquare size={24} color="#3b82f6" />
           Analysis Complete
         </div>
         <button className={styles.downloadBtn} onClick={downloadReport}>
@@ -34,8 +37,18 @@ export function ReportViewer({ result, onReset }: ReportViewerProps) {
           Download .md
         </button>
       </div>
-      <div style={{ padding: '0 2rem', marginTop: '-0.5rem', marginBottom: '1rem', color: '#a1a1aa', fontSize: '0.85rem', fontStyle: 'italic' }}>
-        *Note: To ensure optimal performance and cost efficiency, this analysis prioritizes the most relevant 30-50 files in the codebase. Extremely large repositories may be partially reviewed.
+      <div style={{
+        padding: '0 2rem',
+        marginTop: '-0.5rem',
+        marginBottom: '1rem',
+        color: '#a1a1aa',
+        fontSize: '0.85rem',
+        fontStyle: 'italic',
+      }}>
+        * To ensure optimal performance, this analysis covers up to{' '}
+        <strong style={{ color: '#71717a' }}>{MAX_FILES_FOR_ANALYSIS} files</strong> (each up to{' '}
+        <strong style={{ color: '#71717a' }}>{maxFileSizeKb} KB</strong>).
+        Extremely large repositories may be partially reviewed.
       </div>
       <div className={styles.resultsContent}>
         <div className="markdown-body">
@@ -45,7 +58,7 @@ export function ReportViewer({ result, onReset }: ReportViewerProps) {
         </div>
       </div>
       <div style={{ padding: '0 2rem 2rem' }}>
-        <button 
+        <button
           className={styles.button}
           onClick={onReset}
           style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', boxShadow: 'none' }}
